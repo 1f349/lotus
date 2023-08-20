@@ -16,9 +16,11 @@ type Mail struct {
 	body    []byte
 }
 
+var defaultDialer = smtp.Dial
+
 func (s *Smtp) Send(mail *Mail) error {
 	// dial smtp server
-	smtpClient, err := smtp.Dial(s.Server)
+	smtpClient, err := defaultDialer(s.Server)
 	if err != nil {
 		return err
 	}

@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/primrose.iml" filepath="$PROJECT_DIR$/.idea/primrose.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/lotus.iml" filepath="$PROJECT_DIR$/.idea/lotus.iml" />
     </modules>
   </component>
 </project>

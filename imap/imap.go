@@ -13,9 +13,11 @@ type Imap struct {
 	Separator string `yaml:"separator"`
 }
 
+var defaultDialer = client.Dial
+
 func (i *Imap) MakeClient(user string) (*Client, error) {
 	// dial imap server
-	imapClient, err := client.Dial(i.Server)
+	imapClient, err := defaultDialer(i.Server)
 	if err != nil {
 		return nil, err
 	}

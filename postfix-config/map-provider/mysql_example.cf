@@ -1,0 +1,5 @@
+user = example
+password = 1234
+hosts = 127.0.0.1
+dbname = mail
+query = SELECT aliasMap.goto FROM aliasMap,aliasdomainMap WHERE aliasdomainMap.domain='%d' AND aliasMap.address = CONCAT('%u', '@', aliasdomainMap.goto) AND aliasMap.active > 0 AND aliasdomainMap.active > 0
