@@ -9,7 +9,20 @@ type Config struct {
 	VirtualMailboxMaps    mapProvider.MapProvider
 	AliasMaps             mapProvider.MapProvider
 	LocalRecipientMaps    mapProvider.MapProvider
-	SmtpdSenderLoginMaps  string // TODO(melon): union map?
+	SmtpdSenderLoginMaps  mapProvider.MapProvider
+}
+
+var parseProviderData = map[string]string{
+	"virtual_mailbox_domains": "comma",
+	"virtual_alias_maps":      "comma",
+	"virtual_mailbox_maps":    "comma",
+	"alias_maps":              "comma",
+	"local_recipient_maps":    "comma",
+	"smtpd_sender_login_maps": "union",
+}
+
+func (c *Config) ParseProvider(k string) string {
+	return parseProviderData[k]
 }
 
 func (c *Config) SetKey(k string, m mapProvider.MapProvider) {
@@ -25,14 +38,6 @@ func (c *Config) SetKey(k string, m mapProvider.MapProvider) {
 	case "local_recipient_maps":
 		c.LocalRecipientMaps = m
 	case "smtpd_sender_login_maps":
-		c.SmtpdSenderLoginMaps = "<ERROR>"
+		c.SmtpdSenderLoginMaps = m
 	}
-}
-
-func (c *Config) NeedsMapProvider(k string) bool {
-	switch k {
-	case "virtual_mailbox_domains", "virtual_alias_maps", "virtual_mailbox_maps", "alias_maps", "local_recipient_maps", "smtpd_sender_login_maps":
-		return true
-	}
-	return false
 }

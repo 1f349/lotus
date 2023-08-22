@@ -38,7 +38,7 @@ scanAgain:
 }
 
 func (c *ConfigParser) Pair() (string, string) {
-	return c.pair[0], c.pair[1]
+	return strings.TrimSpace(c.pair[0]), strings.TrimSpace(c.pair[1])
 }
 
 func (c *ConfigParser) Err() error {

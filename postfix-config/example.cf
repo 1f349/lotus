@@ -1,10 +1,10 @@
 # this only contains the relevant config properties
 
-recipient_delimiter = +
+#recipient_delimiter = +
 
-virtual_mailbox_domains = mysql:/etc/postfix/sql/mysql_virtual_domains_maps.cf
-virtual_alias_maps = mysql:/etc/postfix/sql/mysql_virtual_alias_maps.cf, mysql:/etc/postfix/sql/mysql_virtual_alias_wildcard_maps.cf, mysql:/etc/postfix/sql/mysql_virtual_alias_domain_maps.cf, mysql:/etc/postfix/sql/mysql_virtual_alias_user_maps.cf, mysql:/etc/postfix/sql/mysql_virtual_alias_userdomain_maps.cf, mysql:/etc/postfix/sql/mysql_virtual_alias_domain_catchall_maps.cf, mysql:/etc/postfix/sql/mysql_virtual_alias_user_catchall_maps.cf
-virtual_mailbox_maps = mysql:/etc/postfix/sql/mysql_virtual_mailbox_maps.cf, mysql:/etc/postfix/sql/mysql_virtual_alias_domain_mailbox_maps.cf, mysql:/etc/postfix/sql/mysql_virtual_alias_user_mailbox_maps.cf, mysql:/etc/postfix/sql/mysql_virtual_alias_userdomain_mailbox_maps.cf
-alias_maps = hash:/etc/aliases $virtual_alias_maps
+virtual_mailbox_domains = mysql:mysql_virtual_domains_maps.cf
+virtual_alias_maps = mysql:mysql_virtual_alias_maps.cf, mysql:mysql_virtual_alias_wildcard_maps.cf, mysql:mysql_virtual_alias_domain_maps.cf, mysql:mysql_virtual_alias_user_maps.cf, mysql:mysql_virtual_alias_userdomain_maps.cf, mysql:mysql_virtual_alias_domain_catchall_maps.cf, mysql:mysql_virtual_alias_user_catchall_maps.cf
+virtual_mailbox_maps = mysql:mysql_virtual_mailbox_maps.cf, mysql:mysql_virtual_alias_domain_mailbox_maps.cf, mysql:mysql_virtual_alias_user_mailbox_maps.cf, mysql:mysql_virtual_alias_userdomain_mailbox_maps.cf
+alias_maps = hash:aliases.txt $virtual_alias_maps
 local_recipient_maps = $virtual_mailbox_maps $alias_maps
-smtpd_sender_login_maps = unionmap:{ hash:/etc/aliases, mysql:/etc/postfix/sql/mysql_sender_alias_maps.cf, mysql:/etc/postfix/sql/mysql_virtual_alias_maps.cf, mysql:/etc/postfix/sql/mysql_virtual_alias_domain_maps.cf, mysql:/etc/postfix/sql/mysql_virtual_alias_user_maps.cf, mysql:/etc/postfix/sql/mysql_virtual_alias_userdomain_maps.cf }
+smtpd_sender_login_maps = unionmap:{ hash:aliases.txt, mysql:mysql_sender_alias_maps.cf, mysql:mysql_virtual_alias_maps.cf, mysql:mysql_virtual_alias_domain_maps.cf, mysql:mysql_virtual_alias_user_maps.cf, mysql:mysql_virtual_alias_userdomain_maps.cf }
