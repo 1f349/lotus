@@ -68,7 +68,7 @@ func (s Json) PrepareMail(now time.Time) (*Mail, error) {
 	}
 
 	// save for use in the caller
-	from := addrFrom[0].Address
+	from := addrFrom[0]
 
 	// set base headers
 	var h mail.Header
@@ -78,6 +78,7 @@ func (s Json) PrepareMail(now time.Time) (*Mail, error) {
 	h.SetAddressList("Reply-To", addrReplyTo)
 	h.SetAddressList("To", addrTo)
 	h.SetAddressList("Cc", addrCc)
+	h.SetAddressList("Bcc", addrBcc)
 
 	// set content type header
 	switch s.BodyType {
@@ -94,16 +95,13 @@ func (s Json) PrepareMail(now time.Time) (*Mail, error) {
 		return nil, err
 	}
 
-	m := &Mail{
-		From:    from,
-		Deliver: CreateSenderSlice(addrTo, addrCc, addrBcc),
-	}
-
 	out := new(bytes.Buffer)
 	if err := entity.WriteTo(out); err != nil {
 		return nil, err
 	}
 
-	m.Body = out.Bytes()
-	return m, nil
+	return &Mail{
+		From: from.String(),
+		Body: out.Bytes(),
+	}, nil
 }

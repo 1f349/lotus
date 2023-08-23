@@ -1,9 +1,7 @@
 package smtp
 
 import (
-	"bytes"
-	"github.com/emersion/go-message/mail"
-	"github.com/emersion/go-smtp"
+	"os/exec"
 )
 
 type Smtp struct {
@@ -11,37 +9,26 @@ type Smtp struct {
 }
 
 type Mail struct {
-	From    string
-	Deliver []string
-	Body    []byte
+	From string
+	Body []byte
 }
 
-var defaultDialer = smtp.Dial
+var execSendMail = func(from string) *exec.Cmd {
+	return exec.Command("/usr/lib/sendmail", "-f", from, "-t")
+}
 
 func (s *Smtp) Send(mail *Mail) error {
-	// dial smtp server
-	smtpClient, err := defaultDialer(s.Server)
+	// start sendmail caller
+	sendMail := execSendMail(mail.From)
+	inPipe, err := sendMail.StdinPipe()
 	if err != nil {
 		return err
 	}
 
-	// use a reader to send bytes
-	r := bytes.NewReader(mail.Body)
-
-	// send mail
-	return smtpClient.SendMail(mail.From, mail.Deliver, r)
-}
-
-func CreateSenderSlice(to, cc, bcc []*mail.Address) []string {
-	a := make([]string, 0, len(to)+len(cc)+len(bcc))
-	for _, i := range to {
-		a = append(a, i.Address)
+	// write message body
+	_, err = inPipe.Write(mail.Body)
+	if err != nil {
+		return err
 	}
-	for _, i := range cc {
-		a = append(a, i.Address)
-	}
-	for _, i := range bcc {
-		a = append(a, i.Address)
-	}
-	return a
+	return inPipe.Close()
 }

@@ -46,9 +46,6 @@ func (f *fakeSmtp) Send(mail *smtp.Mail) error {
 	if mail.From != f.from {
 		return fmt.Errorf("test fail: invalid from address")
 	}
-	if !slices.Equal(mail.Deliver, f.deliver) {
-		return fmt.Errorf("test fail: invalid deliver slice")
-	}
 	if !slices.Equal(mail.Body, f.body) {
 		return fmt.Errorf("test fail: invalid message body")
 	}
