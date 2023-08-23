@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	postfixLookup "github.com/1f349/lotus/postfix-lookup"
 	"github.com/1f349/lotus/smtp"
 	"github.com/julienschmidt/httprouter"
@@ -34,12 +35,11 @@ func MessageSender(send Smtp) func(rw http.ResponseWriter, req *http.Request, pa
 		// prepare the mail for sending
 		mail, err := j.PrepareMail(timeNow())
 		if err != nil {
-			apiError(rw, http.StatusBadRequest, "Invalid mail message")
+			apiError(rw, http.StatusBadRequest, fmt.Sprintf("Invalid mail message: %s", err))
 			return
 		}
 
 		// this looks up the underlying account for the sender alias
-		println(mail.From)
 		lookup, err := defaultPostfixLookup(mail.From)
 
 		// the alias does not exist

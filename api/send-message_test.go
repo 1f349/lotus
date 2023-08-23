@@ -144,7 +144,67 @@ var messageSenderTestData = []struct {
 		smtp:   &fakeSmtp{},
 		claims: makeFakeAuthClaims("admin@example.com"),
 		status: http.StatusBadRequest,
-		output: "Invalid mail message",
+		output: "Invalid mail message: multiple from addresses",
+	},
+	{
+		req: func() (*http.Request, error) {
+			j, err := json.Marshal(smtp.Json{
+				From:     "noreply@example.com",
+				ReplyTo:  "admin@example.com",
+				To:       "user@example.com",
+				Subject:  "Test Subject",
+				BodyType: "no",
+				Body:     "Plain text",
+			})
+			if err != nil {
+				return nil, err
+			}
+			return http.NewRequest(http.MethodPost, "https://api.example.com/v1/mail/message", bytes.NewReader(j))
+		},
+		smtp:   &fakeSmtp{},
+		claims: makeFakeAuthClaims("admin@example.com"),
+		status: http.StatusBadRequest,
+		output: "Invalid mail message: invalid body type",
+	},
+	{
+		req: func() (*http.Request, error) {
+			j, err := json.Marshal(smtp.Json{
+				From:     "noreply@example.com",
+				ReplyTo:  "admin@example.com",
+				To:       "a <user@example.com",
+				Subject:  "Test Subject",
+				BodyType: "no",
+				Body:     "Plain text",
+			})
+			if err != nil {
+				return nil, err
+			}
+			return http.NewRequest(http.MethodPost, "https://api.example.com/v1/mail/message", bytes.NewReader(j))
+		},
+		smtp:   &fakeSmtp{},
+		claims: makeFakeAuthClaims("admin@example.com"),
+		status: http.StatusBadRequest,
+		output: "Invalid mail message: mail: unclosed angle-addr",
+	},
+	{
+		req: func() (*http.Request, error) {
+			j, err := json.Marshal(smtp.Json{
+				From:     "noreply@example.com",
+				ReplyTo:  "admin@example.com",
+				To:       "a <user>",
+				Subject:  "Test Subject",
+				BodyType: "no",
+				Body:     "Plain text",
+			})
+			if err != nil {
+				return nil, err
+			}
+			return http.NewRequest(http.MethodPost, "https://api.example.com/v1/mail/message", bytes.NewReader(j))
+		},
+		smtp:   &fakeSmtp{},
+		claims: makeFakeAuthClaims("admin@example.com"),
+		status: http.StatusBadRequest,
+		output: "Invalid mail message: mail: missing @ in addr-spec",
 	},
 	{
 		req: func() (*http.Request, error) {
