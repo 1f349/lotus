@@ -22,7 +22,7 @@ type Json struct {
 	Bcc      string `json:"bcc"`
 	Subject  string `json:"subject"`
 	BodyType string `json:"body_type"`
-	Body     string `json:"body"`
+	Body     string `json:"Body"`
 }
 
 func (s Json) parseAddresses() (addrFrom, addrReplyTo, addrTo, addrCc, addrBcc []*mail.Address, err error) {
@@ -31,23 +31,31 @@ func (s Json) parseAddresses() (addrFrom, addrReplyTo, addrTo, addrCc, addrBcc [
 	if err != nil {
 		return
 	}
-	addrReplyTo, err = mail.ParseAddressList(s.ReplyTo)
-	if err != nil {
-		return
+	if s.ReplyTo != "" {
+		addrReplyTo, err = mail.ParseAddressList(s.ReplyTo)
+		if err != nil {
+			return
+		}
 	}
-	addrTo, err = mail.ParseAddressList(s.To)
-	if err != nil {
-		return
+	if s.To != "" {
+		addrTo, err = mail.ParseAddressList(s.To)
+		if err != nil {
+			return
+		}
 	}
-	addrCc, err = mail.ParseAddressList(s.Cc)
-	if err != nil {
-		return
+	if s.Cc != "" {
+		addrCc, err = mail.ParseAddressList(s.Cc)
+		if err != nil {
+			return
+		}
 	}
-	addrBcc, err = mail.ParseAddressList(s.Bcc)
+	if s.Bcc != "" {
+		addrBcc, err = mail.ParseAddressList(s.Bcc)
+	}
 	return
 }
 
-func (s Json) PrepareMail() (*Mail, error) {
+func (s Json) PrepareMail(now time.Time) (*Mail, error) {
 	// parse addresses from json data
 	addrFrom, addrReplyTo, addrTo, addrCc, addrBcc, err := s.parseAddresses()
 	if err != nil {
@@ -64,7 +72,7 @@ func (s Json) PrepareMail() (*Mail, error) {
 
 	// set base headers
 	var h mail.Header
-	h.SetDate(time.Now())
+	h.SetDate(now)
 	h.SetSubject(s.Subject)
 	h.SetAddressList("From", addrFrom)
 	h.SetAddressList("Reply-To", addrReplyTo)
@@ -87,8 +95,8 @@ func (s Json) PrepareMail() (*Mail, error) {
 	}
 
 	m := &Mail{
-		from:    from,
-		deliver: CreateSenderSlice(addrTo, addrCc, addrBcc),
+		From:    from,
+		Deliver: CreateSenderSlice(addrTo, addrCc, addrBcc),
 	}
 
 	out := new(bytes.Buffer)
@@ -96,6 +104,6 @@ func (s Json) PrepareMail() (*Mail, error) {
 		return nil, err
 	}
 
-	m.body = out.Bytes()
+	m.Body = out.Bytes()
 	return m, nil
 }

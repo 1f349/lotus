@@ -11,9 +11,9 @@ type Smtp struct {
 }
 
 type Mail struct {
-	from    string
-	deliver []string
-	body    []byte
+	From    string
+	Deliver []string
+	Body    []byte
 }
 
 var defaultDialer = smtp.Dial
@@ -26,10 +26,10 @@ func (s *Smtp) Send(mail *Mail) error {
 	}
 
 	// use a reader to send bytes
-	r := bytes.NewReader(mail.body)
+	r := bytes.NewReader(mail.Body)
 
 	// send mail
-	return smtpClient.SendMail(mail.from, mail.deliver, r)
+	return smtpClient.SendMail(mail.From, mail.Deliver, r)
 }
 
 func CreateSenderSlice(to, cc, bcc []*mail.Address) []string {

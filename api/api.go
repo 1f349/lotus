@@ -3,13 +3,12 @@ package api
 import (
 	"encoding/json"
 	"github.com/1f349/lotus/imap"
-	"github.com/1f349/lotus/smtp"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"time"
 )
 
-func SetupApiServer(listen string, auth func(callback AuthCallback) httprouter.Handle, send *smtp.Smtp, recv *imap.Imap) *http.Server {
+func SetupApiServer(listen string, auth func(callback AuthCallback) httprouter.Handle, send Smtp, recv Imap) *http.Server {
 	r := httprouter.New()
 
 	// === ACCOUNT ===
@@ -18,39 +17,7 @@ func SetupApiServer(listen string, auth func(callback AuthCallback) httprouter.H
 	}))
 
 	// === SMTP ===
-	r.POST("/message", auth(func(rw http.ResponseWriter, req *http.Request, params httprouter.Params, b AuthClaims) {
-		// check body exists
-		if req.Body == nil {
-			rw.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		// parse json body
-		var j smtp.Json
-		err := json.NewDecoder(req.Body).Decode(&j)
-		if err != nil {
-			rw.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		// TODO(melon): add alias support
-		if j.From == b.Subject {
-
-		}
-
-		mail, err := j.PrepareMail()
-		if err != nil {
-			rw.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		if send.Send(mail) != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		rw.WriteHeader(http.StatusAccepted)
-	}))
+	r.POST("/message", auth(MessageSender(send)))
 
 	// === IMAP ===
 	type statusJson struct {
@@ -126,7 +93,7 @@ func apiError(rw http.ResponseWriter, code int, m string) {
 
 type IcCallback[T any] func(rw http.ResponseWriter, req *http.Request, params httprouter.Params, cli *imap.Client, t T)
 
-func imapClient[T any](recv *imap.Imap, cb IcCallback[T]) AuthCallback {
+func imapClient[T any](recv Imap, cb IcCallback[T]) AuthCallback {
 	return func(rw http.ResponseWriter, req *http.Request, params httprouter.Params, b AuthClaims) {
 		if req.Body == nil {
 			rw.WriteHeader(http.StatusBadRequest)

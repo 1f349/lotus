@@ -51,7 +51,7 @@ func TestSmtp_Send(t *testing.T) {
 	}
 
 	s := &Smtp{Server: "localhost:25"}
-	err := s.Send(&Mail{from: "test@localhost", deliver: []string{"a@localhost", "b@localhost"}, body: sendTestMessage})
+	err := s.Send(&Mail{From: "test@localhost", Deliver: []string{"a@localhost", "b@localhost"}, Body: sendTestMessage})
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("MAIL test@localhost\n"), <-serverData)
 	assert.Equal(t, []byte("RCPT a@localhost\n"), <-serverData)
