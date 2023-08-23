@@ -7,6 +7,7 @@ import (
 	postfixLookup "github.com/1f349/lotus/postfix-lookup"
 	"github.com/1f349/lotus/smtp"
 	"github.com/julienschmidt/httprouter"
+	"log"
 	"net/http"
 	"time"
 )
@@ -61,8 +62,9 @@ func MessageSender(send Smtp) func(rw http.ResponseWriter, req *http.Request, pa
 		}
 
 		// try sending the mail
-		if send.Send(mail) != nil {
+		if err := send.Send(mail); err != nil {
 			apiError(rw, http.StatusInternalServerError, "Failed to send mail")
+			log.Printf("Failed to send mail: %#v: %s\n", mail, err)
 			return
 		}
 
