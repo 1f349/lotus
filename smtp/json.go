@@ -101,7 +101,7 @@ func (s Json) PrepareMail(now time.Time) (*Mail, error) {
 	}
 
 	return &Mail{
-		From: from.String(),
+		From: from,
 		Body: out.Bytes(),
 	}, nil
 }

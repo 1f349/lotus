@@ -41,7 +41,7 @@ func MessageSender(send Smtp) func(rw http.ResponseWriter, req *http.Request, pa
 		}
 
 		// this looks up the underlying account for the sender alias
-		lookup, err := defaultPostfixLookup(mail.From)
+		lookup, err := defaultPostfixLookup(mail.From.Address)
 
 		// the alias does not exist
 		if errors.Is(err, postfixLookup.ErrInvalidAlias) {

@@ -1,6 +1,7 @@
 package smtp
 
 import (
+	"github.com/emersion/go-message/mail"
 	"os/exec"
 )
 
@@ -9,7 +10,7 @@ type Smtp struct {
 }
 
 type Mail struct {
-	From string
+	From *mail.Address
 	Body []byte
 }
 
@@ -19,7 +20,7 @@ var execSendMail = func(from string) *exec.Cmd {
 
 func (s *Smtp) Send(mail *Mail) error {
 	// start sendmail caller
-	sendMail := execSendMail(mail.From)
+	sendMail := execSendMail(mail.From.String())
 	inPipe, err := sendMail.StdinPipe()
 	if err != nil {
 		return err
