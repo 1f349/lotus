@@ -31,5 +31,10 @@ func (s *Smtp) Send(mail *Mail) error {
 	if err != nil {
 		return err
 	}
-	return inPipe.Close()
+	err = inPipe.Close()
+	if err != nil {
+		return err
+	}
+
+	return sendMail.Run()
 }
