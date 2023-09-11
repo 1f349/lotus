@@ -3,7 +3,6 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/1f349/lotus/imap"
 	"github.com/gorilla/websocket"
 	"github.com/julienschmidt/httprouter"
 	"log"
@@ -140,29 +139,4 @@ func apiError(rw http.ResponseWriter, code int, m string) {
 	_ = json.NewEncoder(rw).Encode(map[string]string{
 		"error": m,
 	})
-}
-
-type IcCallback[T any] func(rw http.ResponseWriter, req *http.Request, params httprouter.Params, cli *imap.Client, t T) error
-
-func imapClient[T any](recv Imap, cb IcCallback[T]) AuthCallback {
-	return func(rw http.ResponseWriter, req *http.Request, params httprouter.Params, b AuthClaims) {
-		if req.Body == nil {
-			rw.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		var t T
-		if json.NewDecoder(req.Body).Decode(&t) != nil {
-			rw.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		cli, err := recv.MakeClient(b.Subject)
-		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		err = cb(rw, req, params, cli, t)
-		if err != nil {
-			log.Println("[ImapClient] Error:", err)
-		}
-	}
 }

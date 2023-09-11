@@ -1,9 +1,10 @@
 package imap
 
 import (
+	"errors"
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
-	"time"
+	"strconv"
 )
 
 var imapStatusFlags = []imap.StatusItem{
@@ -18,6 +19,8 @@ type Client struct {
 	ic *client.Client
 }
 
+var ErrInvalidArguments = errors.New("invalid arguments")
+
 func (c *Client) HandleWS(action string, args []string) (map[string]any, error) {
 	switch action {
 	case "copy":
@@ -26,23 +29,42 @@ func (c *Client) HandleWS(action string, args []string) (map[string]any, error) 
 		// TODO: implementation
 	case "delete":
 		// TODO: implementation
-	case "select":
-		// TODO: implementation
-	case "fetch":
-		// TODO: implementation
 	case "list":
-		a := make([]*imap.MailboxInfo, 0)
-		b := make(chan *imap.MailboxInfo, 10)
-		go func() {
-			for info := range b {
-				a = append(a, info)
-			}
-		}()
-		err := c.ic.List(args[0], args[1], b)
+		if len(args) != 2 {
+			return nil, ErrInvalidArguments
+		}
+
+		// do list
+		list, err := c.list(args[0], args[1])
 		if err != nil {
 			return nil, err
 		}
-		return map[string]any{"info": a}, nil
+		return map[string]any{"type": "list", "value": list}, nil
+	case "fetch":
+		if len(args) != 4 {
+			return nil, ErrInvalidArguments
+		}
+
+		// parse numeric parameters
+		arg1i, err := strconv.Atoi(args[1])
+		if err != nil {
+			return nil, err
+		}
+		arg2i, err := strconv.Atoi(args[2])
+		if err != nil {
+			return nil, err
+		}
+		arg3i, err := strconv.Atoi(args[3])
+		if err != nil {
+			return nil, err
+		}
+
+		// do fetch
+		fetch, err := c.fetch(args[0], uint32(arg1i), uint32(arg2i), uint32(arg3i))
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"type": "fetch", "value": fetch}, nil
 	case "move":
 		// TODO: implementation
 	case "rename":
@@ -52,27 +74,10 @@ func (c *Client) HandleWS(action string, args []string) (map[string]any, error) 
 	case "status":
 		// TODO: implementation
 	}
-	_ = args
-	return map[string]any{"Error": "Not implemented"}, nil
+	return map[string]any{"error": "Not implemented"}, nil
 }
 
-func (c *Client) Append(name string, flags []string, date time.Time, msg imap.Literal) error {
-	return c.ic.Append(name, flags, date, msg)
-}
-
-func (c *Client) Copy(seqset *imap.SeqSet, dest string) error {
-	return c.ic.Copy(seqset, dest)
-}
-
-func (c *Client) Create(name string) error {
-	return c.ic.Create(name)
-}
-
-func (c *Client) Delete(name string) error {
-	return c.ic.Delete(name)
-}
-
-func (c *Client) Fetch(folder string, start, end, limit uint32) ([]*imap.Message, error) {
+func (c *Client) fetch(folder string, start, end, limit uint32) ([]*imap.Message, error) {
 	// select the mailbox
 	mbox, err := c.ic.Select(folder, false)
 	if err != nil {
@@ -92,7 +97,7 @@ func (c *Client) Fetch(folder string, start, end, limit uint32) ([]*imap.Message
 	messages := make(chan *imap.Message, limit)
 	done := make(chan error, 1)
 	go func() {
-		done <- c.ic.Fetch(seqSet, []imap.FetchItem{imap.FetchEnvelope}, messages)
+		done <- c.ic.Fetch(seqSet, []imap.FetchItem{imap.FetchEnvelope, imap.FetchUid, imap.FetchFlags}, messages)
 	}()
 
 	out := make([]*imap.Message, 0, limit)
@@ -105,7 +110,7 @@ func (c *Client) Fetch(folder string, start, end, limit uint32) ([]*imap.Message
 	return out, nil
 }
 
-func (c *Client) List(ref, name string) ([]*imap.MailboxInfo, error) {
+func (c *Client) list(ref, name string) ([]*imap.MailboxInfo, error) {
 	infos := make(chan *imap.MailboxInfo, 1)
 	done := make(chan error, 1)
 	go func() {
