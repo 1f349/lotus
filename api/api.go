@@ -23,7 +23,7 @@ func SetupApiServer(listen string, auth *AuthChecker, send Smtp, recv Imap) *htt
 	// === SMTP ===
 	r.POST("/smtp", auth.Middleware(MessageSender(send)))
 
-	r.Handle(http.MethodConnect, "/imap", func(rw http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	r.GET("/imap", func(rw http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		// upgrade to websocket conn and defer close
 		c, err := upgrader.Upgrade(rw, req, nil)
 		if err != nil {
