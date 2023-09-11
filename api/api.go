@@ -3,7 +3,9 @@ package api
 import (
 	"encoding/json"
 	"github.com/1f349/lotus/imap"
+	json2 "github.com/1f349/lotus/imap/json"
 	"github.com/julienschmidt/httprouter"
+	"log"
 	"net/http"
 	"time"
 )
@@ -37,7 +39,10 @@ func SetupApiServer(listen string, auth func(callback AuthCallback) httprouter.H
 			rw.WriteHeader(http.StatusForbidden)
 			return
 		}
-		_ = json.NewEncoder(rw).Encode(messages)
+		err = json.NewEncoder(rw).Encode(json2.ListMessagesJson(messages))
+		if err != nil {
+			log.Println("list-messages json encode error:", err)
+		}
 	})))
 	r.GET("/search-messages", auth(imapClient(recv, func(rw http.ResponseWriter, req *http.Request, params httprouter.Params, cli *imap.Client, t statusJson) {
 		status, err := cli.Status(t.Folder)
