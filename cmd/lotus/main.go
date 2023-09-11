@@ -48,7 +48,7 @@ func main() {
 	}
 
 	userAuth := api.CheckAuth(verify, conf.Audience)
-	srv := api.SetupApiServer(conf.Listen, userAuth, conf.Smtp, conf.Imap)
+	srv := api.SetupApiServer(conf.Listen, userAuth, conf.SendMail, conf.Imap)
 	log.Printf("[Lotus] Starting API server on: '%s'\n", srv.Addr)
 	go utils.RunBackgroundHttp("Lotus", srv)
 
