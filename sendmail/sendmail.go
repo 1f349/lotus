@@ -5,7 +5,7 @@ import (
 	"os/exec"
 )
 
-type Smtp struct {
+type SendMail struct {
 	SendMailCommand string `json:"send_mail_command"`
 }
 
@@ -16,7 +16,7 @@ type Mail struct {
 
 var execCommand = exec.Command
 
-func (s *Smtp) Send(mail *Mail) error {
+func (s *SendMail) Send(mail *Mail) error {
 	// start sendmail caller
 	if s.SendMailCommand == "" {
 		s.SendMailCommand = "/usr/sbin/sendmail"

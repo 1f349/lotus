@@ -55,7 +55,7 @@ func TestSmtp_Send(t *testing.T) {
 	listen, err := net.ListenUnix("", addr)
 	assert.NoError(t, err)
 
-	s := &Smtp{SendMailCommand: "/tmp/sendmailXXXXX"}
+	s := &SendMail{SendMailCommand: "/tmp/sendmailXXXXX"}
 	assert.NoError(t, s.Send(m))
 }
 
