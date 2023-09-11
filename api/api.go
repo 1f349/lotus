@@ -58,19 +58,21 @@ func SetupApiServer(listen string, auth *AuthChecker, send Smtp, recv Imap) *htt
 		dec.DisallowUnknownFields()
 		err = dec.Decode(&tokenMsg)
 		if err != nil {
+			_ = c.WriteJSON(map[string]string{"error": "Authentication missing"})
 			return
 		}
 
 		// get a "possible" auth token value
 		// exit on empty token value
 		if tokenMsg.Token == "" {
+			_ = c.WriteJSON(map[string]string{"error": "Authentication missing"})
 			return
 		}
 
 		// check the token
 		authUser, err := auth.Check(tokenMsg.Token)
 		if err != nil {
-			// exit on error
+			_ = c.WriteJSON(map[string]string{"error": "Authentication invalid"})
 			return
 		}
 
@@ -101,21 +103,21 @@ func SetupApiServer(listen string, auth *AuthChecker, send Smtp, recv Imap) *htt
 			}
 			err := c.ReadJSON(&m)
 			if err != nil {
-				// errors should close the connection
+				_ = c.WriteJSON(map[string]string{"error": "Invalid input"})
 				return
 			}
 
 			// handle action
 			j, err := client.HandleWS(m.Action, m.Args)
 			if err != nil {
-				// errors should close the connection
+				_ = c.WriteJSON(map[string]string{"error": "Action failed"})
 				return
 			}
 
 			// write outgoing message
 			err = c.WriteJSON(j)
 			if err != nil {
-				// errors should close the connection
+				_ = c.WriteJSON(map[string]string{"error": "Invalid output"})
 				return
 			}
 		}
