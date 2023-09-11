@@ -74,11 +74,16 @@ func SetupApiServer(listen string, auth *AuthChecker, send Smtp, recv Imap) *htt
 			return
 		}
 
-		_ = authUser
-
+		// open imap client
 		client, err := recv.MakeClient(authUser.Subject)
 		if err != nil {
 			_ = c.WriteJSON(map[string]string{"error": "Making client failed"})
+			return
+		}
+
+		// auth was ok
+		err = c.WriteJSON(map[string]string{"auth": "ok"})
+		if err != nil {
 			return
 		}
 
