@@ -42,7 +42,7 @@ func (c *Client) HandleWS(action string, args []string) (map[string]any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return map[string]any{"Info": a}, nil
+		return map[string]any{"info": a}, nil
 	case "move":
 		// TODO: implementation
 	case "rename":

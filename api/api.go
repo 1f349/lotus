@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"github.com/1f349/lotus/imap"
 	"github.com/gorilla/websocket"
@@ -49,17 +50,25 @@ func SetupApiServer(listen string, auth *AuthChecker, send Smtp, recv Imap) *htt
 			return
 		}
 
-		// get a "possible" auth token value
-		authToken := string(msg)
+		// parse token from message
+		var tokenMsg struct {
+			Token string `json:"token"`
+		}
+		dec := json.NewDecoder(bytes.NewReader(msg))
+		dec.DisallowUnknownFields()
+		err = dec.Decode(&tokenMsg)
+		if err != nil {
+			return
+		}
 
-		// wait for authToken or error
-		// exit on empty reply
-		if authToken == "" {
+		// get a "possible" auth token value
+		// exit on empty token value
+		if tokenMsg.Token == "" {
 			return
 		}
 
 		// check the token
-		authUser, err := auth.Check(authToken)
+		authUser, err := auth.Check(tokenMsg.Token)
 		if err != nil {
 			// exit on error
 			return
@@ -69,7 +78,7 @@ func SetupApiServer(listen string, auth *AuthChecker, send Smtp, recv Imap) *htt
 
 		client, err := recv.MakeClient(authUser.Subject)
 		if err != nil {
-			_ = c.WriteJSON(map[string]string{"Error": "Making client failed"})
+			_ = c.WriteJSON(map[string]string{"error": "Making client failed"})
 			return
 		}
 
