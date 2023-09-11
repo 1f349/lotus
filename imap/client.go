@@ -98,7 +98,7 @@ func (c *Client) fetch(folder string, start, end, limit uint32) ([]*imap.Message
 	messages := make(chan *imap.Message, limit)
 	done := make(chan error, 1)
 	go func() {
-		done <- c.ic.Fetch(seqSet, []imap.FetchItem{imap.FetchEnvelope, imap.FetchUid, imap.FetchFlags}, messages)
+		done <- c.ic.Fetch(seqSet, []imap.FetchItem{imap.FetchEnvelope, imap.FetchUid, imap.FetchFlags, imap.FetchInternalDate}, messages)
 	}()
 
 	out := make([]*imap.Message, 0, limit)
