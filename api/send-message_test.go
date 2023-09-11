@@ -1,14 +1,16 @@
 package api
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	postfixLookup "github.com/1f349/lotus/postfix-lookup"
-	"github.com/1f349/lotus/smtp"
+	"github.com/1f349/lotus/sendmail"
 	"github.com/MrMelon54/mjwt/auth"
 	"github.com/MrMelon54/mjwt/claims"
+	"github.com/emersion/go-message/mail"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/assert"
@@ -37,16 +39,31 @@ func init() {
 }
 
 type fakeSmtp struct {
-	from    string
-	deliver []string
-	body    []byte
+	from *mail.Address
+	body []byte
 }
 
-func (f *fakeSmtp) Send(mail *smtp.Mail) error {
-	if mail.From != f.from {
+func (f *fakeSmtp) Send(mail *sendmail.Mail) error {
+	// remove the Bcc header line
+	s := bufio.NewScanner(bytes.NewReader(mail.Body))
+	b := new(bytes.Buffer)
+	b.Grow(len(mail.Body))
+	for s.Scan() {
+		a := s.Text()
+		if strings.HasPrefix(a, "Bcc:") {
+			continue
+		}
+		b.WriteString(a + "\r\n")
+	}
+	if err := s.Err(); err != nil {
+		return err
+	}
+
+	// check values are the same
+	if mail.From.String() != f.from.String() {
 		return fmt.Errorf("test fail: invalid from address")
 	}
-	if !slices.Equal(mail.Body, f.body) {
+	if !slices.Equal(b.Bytes(), f.body) {
 		return fmt.Errorf("test fail: invalid message body")
 	}
 	return nil
@@ -54,7 +71,7 @@ func (f *fakeSmtp) Send(mail *smtp.Mail) error {
 
 type fakeFailedSmtp struct{}
 
-func (f *fakeFailedSmtp) Send(mail *smtp.Mail) error {
+func (f *fakeFailedSmtp) Send(mail *sendmail.Mail) error {
 	return errors.New("sending failed")
 }
 
@@ -85,7 +102,7 @@ var messageSenderTestData = []struct {
 	},
 	{
 		req: func() (*http.Request, error) {
-			j, err := json.Marshal(smtp.Json{
+			j, err := json.Marshal(sendmail.Json{
 				From:     "noreply2@example.com",
 				ReplyTo:  "admin@example.com",
 				To:       "user@example.com",
@@ -105,7 +122,7 @@ var messageSenderTestData = []struct {
 	},
 	{
 		req: func() (*http.Request, error) {
-			j, err := json.Marshal(smtp.Json{
+			j, err := json.Marshal(sendmail.Json{
 				From:     "user@example.com",
 				ReplyTo:  "admin@example.com",
 				To:       "user@example.com",
@@ -125,7 +142,7 @@ var messageSenderTestData = []struct {
 	},
 	{
 		req: func() (*http.Request, error) {
-			j, err := json.Marshal(smtp.Json{
+			j, err := json.Marshal(sendmail.Json{
 				From:     "noreply@example.com, user2@example.com",
 				ReplyTo:  "admin@example.com",
 				To:       "user@example.com",
@@ -145,7 +162,7 @@ var messageSenderTestData = []struct {
 	},
 	{
 		req: func() (*http.Request, error) {
-			j, err := json.Marshal(smtp.Json{
+			j, err := json.Marshal(sendmail.Json{
 				From:     "noreply@example.com",
 				ReplyTo:  "admin@example.com",
 				To:       "user@example.com",
@@ -165,7 +182,7 @@ var messageSenderTestData = []struct {
 	},
 	{
 		req: func() (*http.Request, error) {
-			j, err := json.Marshal(smtp.Json{
+			j, err := json.Marshal(sendmail.Json{
 				From:     "noreply@example.com",
 				ReplyTo:  "admin@example.com",
 				To:       "a <user@example.com",
@@ -185,7 +202,7 @@ var messageSenderTestData = []struct {
 	},
 	{
 		req: func() (*http.Request, error) {
-			j, err := json.Marshal(smtp.Json{
+			j, err := json.Marshal(sendmail.Json{
 				From:     "noreply@example.com",
 				ReplyTo:  "admin@example.com",
 				To:       "a <user>",
@@ -205,7 +222,7 @@ var messageSenderTestData = []struct {
 	},
 	{
 		req: func() (*http.Request, error) {
-			j, err := json.Marshal(smtp.Json{
+			j, err := json.Marshal(sendmail.Json{
 				From:     "noreply@example.com",
 				ReplyTo:  "admin@example.com",
 				To:       "user@example.com",
@@ -225,7 +242,7 @@ var messageSenderTestData = []struct {
 	},
 	{
 		req: func() (*http.Request, error) {
-			j, err := json.Marshal(smtp.Json{
+			j, err := json.Marshal(sendmail.Json{
 				From:     "noreply@example.com",
 				ReplyTo:  "admin@example.com",
 				To:       "user@example.com",
@@ -241,8 +258,7 @@ var messageSenderTestData = []struct {
 			return http.NewRequest(http.MethodPost, "https://api.example.com/v1/mail/message", bytes.NewReader(j))
 		},
 		smtp: &fakeSmtp{
-			from:    "noreply@example.com",
-			deliver: []string{"user@example.com", "user2@example.com", "user3@example.com"},
+			from: &mail.Address{Address: "noreply@example.com"},
 			body: []byte("Mime-Version: 1.0\r\n" +
 				"Content-Type: text/plain; charset=utf-8\r\n" +
 				"Cc: <user2@example.com>\r\n" +
@@ -252,7 +268,7 @@ var messageSenderTestData = []struct {
 				"Subject: Test Subject\r\n" +
 				"Date: Sat, 01 Jan 2000 00:00:00 +0000\r\n" +
 				"\r\n" +
-				"Some plain text"),
+				"Some plain text\r\n"),
 		},
 		claims: makeFakeAuthClaims("admin@example.com"),
 		status: http.StatusAccepted,

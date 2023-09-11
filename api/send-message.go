@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	postfixLookup "github.com/1f349/lotus/postfix-lookup"
-	"github.com/1f349/lotus/smtp"
+	"github.com/1f349/lotus/sendmail"
 	"github.com/julienschmidt/httprouter"
 	"log"
 	"net/http"
@@ -26,7 +26,7 @@ func MessageSender(send Smtp) func(rw http.ResponseWriter, req *http.Request, pa
 		}
 
 		// parse json body
-		var j smtp.Json
+		var j sendmail.Json
 		err := json.NewDecoder(req.Body).Decode(&j)
 		if err != nil {
 			apiError(rw, http.StatusBadRequest, "Invalid JSON body")

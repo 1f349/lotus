@@ -2,11 +2,11 @@ package api
 
 import (
 	"github.com/1f349/lotus/imap"
-	"github.com/1f349/lotus/smtp"
+	"github.com/1f349/lotus/sendmail"
 )
 
 type Smtp interface {
-	Send(mail *smtp.Mail) error
+	Send(mail *sendmail.Mail) error
 }
 
 type Imap interface {

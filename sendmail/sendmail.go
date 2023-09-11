@@ -1,4 +1,4 @@
-package smtp
+package sendmail
 
 import (
 	"github.com/emersion/go-message/mail"
@@ -6,7 +6,7 @@ import (
 )
 
 type Smtp struct {
-	Server string `yaml:"server"`
+	SendMailCommand string `json:"send_mail_command"`
 }
 
 type Mail struct {
@@ -14,13 +14,14 @@ type Mail struct {
 	Body []byte
 }
 
-var execSendMail = func(from string) *exec.Cmd {
-	return exec.Command("/usr/lib/sendmail", "-f", from, "-t")
-}
+var execCommand = exec.Command
 
 func (s *Smtp) Send(mail *Mail) error {
 	// start sendmail caller
-	sendMail := execSendMail(mail.From.String())
+	if s.SendMailCommand == "" {
+		s.SendMailCommand = "/usr/sbin/sendmail"
+	}
+	sendMail := execCommand(s.SendMailCommand, "-f", mail.From.Address, "-t")
 	inPipe, err := sendMail.StdinPipe()
 	if err != nil {
 		return err
@@ -36,5 +37,6 @@ func (s *Smtp) Send(mail *Mail) error {
 		return err
 	}
 
+	// run command
 	return sendMail.Run()
 }
