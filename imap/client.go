@@ -18,6 +18,44 @@ type Client struct {
 	ic *client.Client
 }
 
+func (c *Client) HandleWS(action string, args []string) (map[string]any, error) {
+	switch action {
+	case "copy":
+		// TODO: implementation
+	case "create":
+		// TODO: implementation
+	case "delete":
+		// TODO: implementation
+	case "select":
+		// TODO: implementation
+	case "fetch":
+		// TODO: implementation
+	case "list":
+		a := make([]*imap.MailboxInfo, 0)
+		b := make(chan *imap.MailboxInfo, 10)
+		go func() {
+			for info := range b {
+				a = append(a, info)
+			}
+		}()
+		err := c.ic.List(args[0], args[1], b)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"Info": a}, nil
+	case "move":
+		// TODO: implementation
+	case "rename":
+		// TODO: implementation
+	case "search":
+		// TODO: implementation
+	case "status":
+		// TODO: implementation
+	}
+	_ = args
+	return map[string]any{"Error": "Not implemented"}, nil
+}
+
 func (c *Client) Append(name string, flags []string, date time.Time, msg imap.Literal) error {
 	return c.ic.Append(name, flags, date, msg)
 }

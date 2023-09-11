@@ -3,167 +3,109 @@ package api
 import (
 	"encoding/json"
 	"github.com/1f349/lotus/imap"
-	"github.com/1f349/lotus/imap/marshal"
-	imap2 "github.com/emersion/go-imap"
+	"github.com/gorilla/websocket"
 	"github.com/julienschmidt/httprouter"
 	"log"
 	"net/http"
 	"time"
 )
 
-func SetupApiServer(listen string, auth func(callback AuthCallback) httprouter.Handle, send Smtp, recv Imap) *http.Server {
+var upgrader = websocket.Upgrader{}
+
+func SetupApiServer(listen string, auth *AuthChecker, send Smtp, recv Imap) *http.Server {
 	r := httprouter.New()
 
 	// === ACCOUNT ===
-	r.GET("/identities", auth(func(rw http.ResponseWriter, req *http.Request, params httprouter.Params, b AuthClaims) {
+	r.GET("/identities", auth.Middleware(func(rw http.ResponseWriter, req *http.Request, params httprouter.Params, b AuthClaims) {
 		// TODO(melon): find users aliases and other account data
 	}))
 
 	// === SMTP ===
-	r.POST("/message", auth(MessageSender(send)))
+	r.POST("/smtp", auth.Middleware(MessageSender(send)))
 
-	r.Handle(http.MethodConnect, "/", func(rw http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		
+	r.Handle(http.MethodConnect, "/imap", func(rw http.ResponseWriter, req *http.Request, params httprouter.Params) {
+		// upgrade to websocket conn and defer close
+		c, err := upgrader.Upgrade(rw, req, nil)
+		if err != nil {
+			log.Println("[Imap] Failed to upgrade to websocket:", err)
+			return
+		}
+		defer c.Close()
+
+		// set a really short deadline to refuse unauthenticated clients
+		deadline := time.Now().Add(5 * time.Second)
+		_ = c.SetReadDeadline(deadline)
+		_ = c.SetWriteDeadline(deadline)
+
+		// close on all possible errors, assume we are being attacked
+		mt, msg, err := c.ReadMessage()
+		if err != nil {
+			return
+		}
+		if mt != websocket.TextMessage {
+			return
+		}
+		if len(msg) >= 2000 {
+			return
+		}
+
+		// get a "possible" auth token value
+		authToken := string(msg)
+
+		// wait for authToken or error
+		// exit on empty reply
+		if authToken == "" {
+			return
+		}
+
+		// check the token
+		authUser, err := auth.Check(authToken)
+		if err != nil {
+			// exit on error
+			return
+		}
+
+		_ = authUser
+
+		client, err := recv.MakeClient(authUser.Subject)
+		if err != nil {
+			_ = c.WriteJSON(map[string]string{"Error": "Making client failed"})
+			return
+		}
+
+		for {
+			// authenticated users get longer to reply
+			// a simple ping/pong setup bypasses this
+			d := time.Now().Add(5 * time.Minute)
+			_ = c.SetReadDeadline(d)
+			_ = c.SetWriteDeadline(d)
+
+			// read incoming message
+			var m struct {
+				Action string   `json:"action"`
+				Args   []string `json:"args"`
+			}
+			err := c.ReadJSON(&m)
+			if err != nil {
+				// errors should close the connection
+				return
+			}
+
+			// handle action
+			j, err := client.HandleWS(m.Action, m.Args)
+			if err != nil {
+				// errors should close the connection
+				return
+			}
+
+			// write outgoing message
+			err = c.WriteJSON(j)
+			if err != nil {
+				// errors should close the connection
+				return
+			}
+		}
 	})
-
-	// === IMAP ===
-	type mailboxStatusJson struct {
-		Folder string `json:"folder"`
-	}
-	r.GET("/mailbox/status", auth(imapClient(recv, func(rw http.ResponseWriter, req *http.Request, params httprouter.Params, cli *imap.Client, t mailboxStatusJson) error {
-		status, err := cli.Status(t.Folder)
-		if err != nil {
-			return err
-		}
-		return json.NewEncoder(rw).Encode(status)
-	})))
-
-	type mailboxListJson struct {
-		Folder  string `json:"folder"`
-		Pattern string `json:"pattern"`
-	}
-	r.GET("/mailbox/list", auth(imapClient(recv, func(rw http.ResponseWriter, req *http.Request, params httprouter.Params, cli *imap.Client, t mailboxListJson) error {
-		list, err := cli.List(t.Folder, t.Pattern)
-		if err != nil {
-			return err
-		}
-		return json.NewEncoder(rw).Encode(list)
-	})))
-
-	type mailboxCreateJson struct {
-		Name string `json:"name"`
-	}
-	r.POST("/mailbox/create", auth(imapClient(recv, func(rw http.ResponseWriter, req *http.Request, params httprouter.Params, cli *imap.Client, t mailboxCreateJson) error {
-		err := cli.Create(t.Name)
-		if err != nil {
-			return err
-		}
-		return json.NewEncoder(rw).Encode(map[string]string{"Status": "OK"})
-	})))
-
-	type messagesListJson struct {
-		Folder string `json:"folder"`
-		Start  uint32 `json:"start"`
-		End    uint32 `json:"end"`
-		Limit  uint32 `json:"limit"`
-	}
-	r.GET("/list-messages", auth(imapClient(recv, func(rw http.ResponseWriter, req *http.Request, params httprouter.Params, cli *imap.Client, t messagesListJson) error {
-		messages, err := cli.Fetch(t.Folder, t.Start, t.End, t.Limit)
-		if err != nil {
-			return err
-		}
-		return json.NewEncoder(rw).Encode(marshal.MessageSliceJson(messages))
-	})))
-
-	type messagesSearchJson struct {
-		Folder       string `json:"folder"`
-		SeqNum       imap2.SeqSet
-		Uid          imap2.SeqSet
-		Since        time.Time
-		Before       time.Time
-		SentSince    time.Time
-		SentBefore   time.Time
-		Body         []string
-		Text         []string
-		WithFlags    []string
-		WithoutFlags []string
-		Larger       uint32
-		Smaller      uint32
-	}
-	r.GET("/search-messages", auth(imapClient(recv, func(rw http.ResponseWriter, req *http.Request, params httprouter.Params, cli *imap.Client, t messagesSearchJson) error {
-		status, err := cli.Search(&imap2.SearchCriteria{
-			SeqNum:       t.SeqNum,
-			Uid:          t.Uid,
-			Since:        time.Time{},
-			Before:       time.Time{},
-			SentSince:    time.Time{},
-			SentBefore:   time.Time{},
-			Header:       nil,
-			Body:         nil,
-			Text:         nil,
-			WithFlags:    nil,
-			WithoutFlags: nil,
-			Larger:       0,
-			Smaller:      0,
-			Not:          nil,
-			Or:           nil,
-		})
-		if err != nil {
-			return err
-		}
-		return json.NewEncoder(rw).Encode(status)
-	})))
-	r.POST("/update-messages-flags", auth(imapClient(recv, func(rw http.ResponseWriter, req *http.Request, params httprouter.Params, cli *imap.Client, t mailboxStatusJson) {
-		status, err := cli.Status(t.Folder)
-		if err != nil {
-			rw.WriteHeader(http.StatusForbidden)
-			return
-		}
-		_ = json.NewEncoder(rw).Encode(status)
-	})))
-	r.GET("/list-messages", auth(imapClient(recv, func(rw http.ResponseWriter, req *http.Request, params httprouter.Params, cli *imap.Client, t statusJson) {
-		messages, err := cli.Fetch(t.Folder, 1, 100, 100)
-		if err != nil {
-			rw.WriteHeader(http.StatusForbidden)
-			return
-		}
-		err = json.NewEncoder(rw).Encode(marshal.ListMessagesJson(messages))
-		if err != nil {
-			log.Println("list-messages json encode error:", err)
-		}
-	})))
-	r.GET("/search-messages", auth(imapClient(recv, func(rw http.ResponseWriter, req *http.Request, params httprouter.Params, cli *imap.Client, t statusJson) {
-		status, err := cli.Status(t.Folder)
-		if err != nil {
-			rw.WriteHeader(http.StatusForbidden)
-			return
-		}
-		_ = json.NewEncoder(rw).Encode(status)
-	})))
-	r.POST("/create-message", auth(imapClient(recv, func(rw http.ResponseWriter, req *http.Request, params httprouter.Params, cli *imap.Client, t statusJson) {
-		status, err := cli.Status(t.Folder)
-		if err != nil {
-			rw.WriteHeader(http.StatusForbidden)
-			return
-		}
-		_ = json.NewEncoder(rw).Encode(status)
-	})))
-	r.POST("/update-messages-flags", auth(imapClient(recv, func(rw http.ResponseWriter, req *http.Request, params httprouter.Params, cli *imap.Client, t statusJson) {
-		status, err := cli.Status(t.Folder)
-		if err != nil {
-			rw.WriteHeader(http.StatusForbidden)
-			return
-		}
-		_ = json.NewEncoder(rw).Encode(status)
-	})))
-	r.POST("/copy-messages", auth(imapClient(recv, func(rw http.ResponseWriter, req *http.Request, params httprouter.Params, cli *imap.Client, t statusJson) {
-		status, err := cli.Status(t.Folder)
-		if err != nil {
-			rw.WriteHeader(http.StatusForbidden)
-			return
-		}
-		_ = json.NewEncoder(rw).Encode(status)
-	})))
 
 	return &http.Server{
 		Addr:              listen,
