@@ -2,6 +2,7 @@ package imap
 
 import (
 	"errors"
+	"github.com/1f349/lotus/imap/json"
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
 	"strconv"
@@ -64,7 +65,7 @@ func (c *Client) HandleWS(action string, args []string) (map[string]any, error) 
 		if err != nil {
 			return nil, err
 		}
-		return map[string]any{"type": "fetch", "value": fetch}, nil
+		return map[string]any{"type": "fetch", "value": json.ListMessagesJson(fetch)}, nil
 	case "move":
 		// TODO: implementation
 	case "rename":
