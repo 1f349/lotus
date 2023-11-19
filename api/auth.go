@@ -3,9 +3,9 @@ package api
 import (
 	"crypto/subtle"
 	"errors"
+	"github.com/1f349/mjwt"
+	"github.com/1f349/mjwt/auth"
 	"github.com/1f349/violet/utils"
-	"github.com/MrMelon54/mjwt"
-	"github.com/MrMelon54/mjwt/auth"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
 )

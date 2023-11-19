@@ -10,7 +10,11 @@ import (
 	"time"
 )
 
-var upgrader = websocket.Upgrader{}
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
 func SetupApiServer(listen string, auth *AuthChecker, send Smtp, recv Imap) *http.Server {
 	r := httprouter.New()
@@ -75,10 +79,17 @@ func SetupApiServer(listen string, auth *AuthChecker, send Smtp, recv Imap) *htt
 			return
 		}
 
+		mailInboxes := authUser.Claims.Perms.Search("mail:inbox=*")
+		if len(mailInboxes) != 1 {
+			_ = c.WriteJSON(map[string]string{"error": "Authentication should only contain one owned inbox"})
+			return
+		}
+
 		// open imap client
-		client, err := recv.MakeClient(authUser.Subject)
+		client, err := recv.MakeClient(mailInboxes[0][len("mail:inbox="):])
 		if err != nil {
-			_ = c.WriteJSON(map[string]string{"error": "Making client failed"})
+			log.Println("Making a client failed:", err)
+			_ = c.WriteJSON(map[string]string{"error": "Making a client failed"})
 			return
 		}
 

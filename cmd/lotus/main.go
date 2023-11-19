@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"github.com/1f349/lotus/api"
+	"github.com/1f349/mjwt"
 	"github.com/1f349/violet/utils"
 	exitReload "github.com/MrMelon54/exit-reload"
-	"github.com/MrMelon54/mjwt"
 	"gopkg.in/yaml.v3"
 	"log"
 	"os"

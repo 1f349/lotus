@@ -2,6 +2,7 @@ package marshal
 
 import (
 	"encoding/json"
+	"github.com/1f349/lotus/utils"
 	"github.com/emersion/go-imap"
 )
 
@@ -26,7 +27,7 @@ func (m MessageJson) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(map[string]any{
 		"SeqNum":        m.SeqNum,
-		"Items":         m.Items,
+		"Items":         utils.MapKeys(m.Items),
 		"Envelope":      m.Envelope,
 		"BodyStructure": m.BodyStructure,
 		"Flags":         m.Flags,
