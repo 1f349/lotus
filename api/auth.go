@@ -10,10 +10,7 @@ import (
 	"net/http"
 )
 
-var (
-	ErrInvalidToken    = errors.New("invalid token")
-	ErrInvalidAudClaim = errors.New("invalid audience claim")
-)
+var ErrInvalidToken = errors.New("invalid token")
 
 type AuthClaims mjwt.BaseTypeClaims[auth.AccessTokenClaims]
 
@@ -41,9 +38,6 @@ func (a *AuthChecker) Middleware(cb AuthCallback) httprouter.Handle {
 		case errors.Is(err, ErrInvalidToken):
 			apiError(rw, http.StatusForbidden, "Invalid token")
 			return
-		case errors.Is(err, ErrInvalidAudClaim):
-			apiError(rw, http.StatusForbidden, "Invalid audience claim")
-			return
 		case err != nil:
 			apiError(rw, http.StatusForbidden, "Unknown error")
 			return
@@ -53,24 +47,12 @@ func (a *AuthChecker) Middleware(cb AuthCallback) httprouter.Handle {
 	}
 }
 
-// Check takes a token and validates whether it is verified and contains the
-// correct audience claim
+// Check takes a token and validates whether it is verified
 func (a *AuthChecker) Check(token string) (AuthClaims, error) {
 	// Read claims from mjwt
 	_, b, err := mjwt.ExtractClaims[auth.AccessTokenClaims](a.Verify, token)
 	if err != nil {
 		return AuthClaims{}, ErrInvalidToken
-	}
-
-	// Check aud value
-	var validAud bool
-	for _, i := range b.Audience {
-		if subtle.ConstantTimeCompare([]byte(i), []byte(a.Aud)) == 1 {
-			validAud = true
-		}
-	}
-	if !validAud {
-		return AuthClaims{}, ErrInvalidAudClaim
 	}
 
 	return AuthClaims(b), nil

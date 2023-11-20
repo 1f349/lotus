@@ -7,7 +7,6 @@ import (
 
 type Conf struct {
 	Listen   string            `yaml:"listen"`
-	Audience string            `yaml:"audience"`
 	SendMail sendmail.SendMail `yaml:"sendmail"`
 	Imap     imap.Imap         `yaml:"imap"`
 }
