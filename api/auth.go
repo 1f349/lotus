@@ -1,7 +1,6 @@
 package api
 
 import (
-	"crypto/subtle"
 	"errors"
 	"github.com/1f349/mjwt"
 	"github.com/1f349/mjwt/auth"
@@ -20,7 +19,6 @@ type AuthCallback func(rw http.ResponseWriter, req *http.Request, params httprou
 // error message or continues to the next handler
 type AuthChecker struct {
 	Verify mjwt.Verifier
-	Aud    string
 }
 
 // Middleware is a httprouter.Handle layer to authenticate requests

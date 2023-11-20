@@ -47,7 +47,7 @@ func main() {
 		log.Fatalf("[Lotus] Failed to load MJWT verifier public key from file '%s': %s", filepath.Join(wd, "signer.public.pem"), err)
 	}
 
-	userAuth := &api.AuthChecker{Verify: verify, Aud: conf.Audience}
+	userAuth := &api.AuthChecker{Verify: verify}
 	srv := api.SetupApiServer(conf.Listen, userAuth, &conf.SendMail, &conf.Imap)
 	log.Printf("[Lotus] Starting API server on: '%s'\n", srv.Addr)
 	go utils.RunBackgroundHttp("Lotus", srv)
