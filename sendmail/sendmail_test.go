@@ -36,11 +36,9 @@ func init() {
 
 func TestSendMail_Send(t *testing.T) {
 	execCommand = func(name string, arg ...string) *exec.Cmd {
-		log.Println("Hello")
 		cs := append([]string{"-test.run=TestSendMailHelperProcess", "--", name}, arg...)
 		cmd := exec.Command(os.Args[0], cs...)
 		cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
-		log.Println(cmd.Path)
 		return cmd
 	}
 	defer func() { execCommand = exec.Command }()

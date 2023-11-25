@@ -23,6 +23,7 @@ func main() {
 		return
 	}
 
+	// load config file
 	openConf, err := os.Open(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -33,6 +34,7 @@ func main() {
 		return
 	}
 
+	// decode config file
 	var conf Conf
 	err = yaml.NewDecoder(openConf).Decode(&conf)
 	if err != nil {
@@ -42,6 +44,7 @@ func main() {
 
 	wd := filepath.Dir(configPath)
 
+	// load mjwt public key
 	verify, err := mjwt.NewMJwtVerifierFromFile(filepath.Join(wd, "signer.public.pem"))
 	if err != nil {
 		log.Fatalf("[Lotus] Failed to load MJWT verifier public key from file '%s': %s", filepath.Join(wd, "signer.public.pem"), err)
