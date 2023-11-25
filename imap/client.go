@@ -69,7 +69,7 @@ func (c *Client) HandleWS(action string, args json.RawMessage) (map[string]any, 
 		if err != nil {
 			return nil, err
 		}
-		return map[string]any{"type": "fetch", "sync": 0, "value": marshal.MessageSliceJson(fetch)}, nil
+		return map[string]any{"type": "fetch", "sync": fetchArgs.Sync, "value": marshal.MessageSliceJson(fetch)}, nil
 	case "move":
 		// TODO: implementation
 	case "rename":
