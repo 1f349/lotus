@@ -1,11 +1,11 @@
 package imap
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/1f349/lotus/imap/marshal"
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
-	"strconv"
 )
 
 var imapStatusFlags = []imap.StatusItem{
@@ -22,7 +22,7 @@ type Client struct {
 
 var ErrInvalidArguments = errors.New("invalid arguments")
 
-func (c *Client) HandleWS(action string, args []string) (map[string]any, error) {
+func (c *Client) HandleWS(action string, args json.RawMessage) (map[string]any, error) {
 	switch action {
 	case "copy":
 		// TODO: implementation
@@ -31,41 +31,45 @@ func (c *Client) HandleWS(action string, args []string) (map[string]any, error) 
 	case "delete":
 		// TODO: implementation
 	case "list":
-		if len(args) != 2 {
+		var listArgs []string
+		err := json.Unmarshal(args, &listArgs)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(listArgs) != 2 {
 			return nil, ErrInvalidArguments
 		}
 
 		// do list
-		list, err := c.list(args[0], args[1])
+		list, err := c.list(listArgs[0], listArgs[1])
 		if err != nil {
 			return nil, err
 		}
 		return map[string]any{"type": "list", "value": list}, nil
 	case "fetch":
-		if len(args) != 4 {
+		var fetchArgs struct {
+			Sync  uint64 `json:"sync"`
+			Path  string `json:"path"`
+			Start uint32 `json:"start"`
+			End   uint32 `json:"end"`
+			Limit uint32 `json:"limit"`
+		}
+		err := json.Unmarshal(args, &fetchArgs)
+		if err != nil {
+			return nil, err
+		}
+
+		if fetchArgs.Sync == 0 || len(fetchArgs.Path) == 0 || fetchArgs.Start == 0 || fetchArgs.End == 0 || fetchArgs.Limit == 0 {
 			return nil, ErrInvalidArguments
 		}
 
-		// parse numeric parameters
-		arg1i, err := strconv.Atoi(args[1])
-		if err != nil {
-			return nil, err
-		}
-		arg2i, err := strconv.Atoi(args[2])
-		if err != nil {
-			return nil, err
-		}
-		arg3i, err := strconv.Atoi(args[3])
-		if err != nil {
-			return nil, err
-		}
-
 		// do fetch
-		fetch, err := c.fetch(args[0], uint32(arg1i), uint32(arg2i), uint32(arg3i))
+		fetch, err := c.fetch(fetchArgs.Path, fetchArgs.Start, fetchArgs.End, fetchArgs.Limit)
 		if err != nil {
 			return nil, err
 		}
-		return map[string]any{"type": "fetch", "value": marshal.MessageSliceJson(fetch)}, nil
+		return map[string]any{"type": "fetch", "sync": 0, "value": marshal.MessageSliceJson(fetch)}, nil
 	case "move":
 		// TODO: implementation
 	case "rename":

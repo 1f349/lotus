@@ -5,8 +5,8 @@ import (
 	"github.com/emersion/go-message"
 	"github.com/emersion/go-message/mail"
 	"github.com/stretchr/testify/assert"
+	"io"
 	"log"
-	"net"
 	"os"
 	"os/exec"
 	"strings"
@@ -34,34 +34,38 @@ func init() {
 	sendTestMessage = out.Bytes()
 }
 
-func TestSmtp_Send(t *testing.T) {
+func TestSendMail_Send(t *testing.T) {
 	execCommand = func(name string, arg ...string) *exec.Cmd {
-		cs := append([]string{"-test.run=TestHelperProcess", "--", name}, arg...)
+		log.Println("Hello")
+		cs := append([]string{"-test.run=TestSendMailHelperProcess", "--", name}, arg...)
 		cmd := exec.Command(os.Args[0], cs...)
 		cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
+		log.Println(cmd.Path)
 		return cmd
 	}
 	defer func() { execCommand = exec.Command }()
 
 	m := &Mail{From: &mail.Address{Address: "test@localhost"}, Body: sendTestMessage}
 
-	temp, err := os.CreateTemp("", "sendmail")
-	if err != nil {
-		return
-	}
-
-	addr, err := net.ResolveUnixAddr("")
-	assert.NoError(t, err)
-	listen, err := net.ListenUnix("", addr)
-	assert.NoError(t, err)
-
 	s := &SendMail{SendMailCommand: "/tmp/sendmailXXXXX"}
 	assert.NoError(t, s.Send(m))
 }
 
-func TestSmtpHelperProcess(t *testing.T) {
+func TestSendMailHelperProcess(t *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}
+	log.Println("This is a test")
+	all, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		panic(err)
+	}
+	assert.Equal(t, strings.ReplaceAll(`Mime-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+To: "A" <a@localhost>
+From: "Test" <test@localhost>
+Subject: Happy Millennium
+Date: Sat, 01 Jan 2000 00:00:00 +0000
 
+Thanks`, "\n", "\r\n"), string(all))
 }

@@ -108,8 +108,8 @@ func SetupApiServer(listen string, auth *AuthChecker, send Smtp, recv Imap) *htt
 
 			// read incoming message
 			var m struct {
-				Action string   `json:"action"`
-				Args   []string `json:"args"`
+				Action string          `json:"action"`
+				Args   json.RawMessage `json:"args"`
 			}
 			err := c.ReadJSON(&m)
 			if err != nil {

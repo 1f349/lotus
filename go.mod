@@ -28,4 +28,5 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	golang.org/x/net v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
+	zappem.net/pub/debug/xxd v1.0.0 // indirect
 )
